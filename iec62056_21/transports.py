@@ -45,19 +45,17 @@ class BaseTransport:
         start_char_received = False
         start_char = None
         end_char = None
-        timeout = timeout or self.timeout
+        timeout_ = timeout or self.timeout
 
         while True:
-
             in_data = b""
-            duration: float = 0.0
             start_time = time.time()
             while True:
                 b = self.recv(1)
 
-                duration = time.time() - start_time
-                if duration > self.timeout:
+                if time.time() - start_time > timeout_:
                     raise TimeoutError(f"Read in {self.__class__.__name__} timed out")
+                start_time = time.time()
                 if not start_char_received:
                     # is start char?
                     if b in start_chars:

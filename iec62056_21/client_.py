@@ -2,8 +2,26 @@ import time
 import logging
 
 from iec62056_21 import messages, constants, transports, exceptions
+from datetime import datetime, timedelta, date
+from iec62056_21 import utils
 
+# create logger
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
 
 
 class Iec6205621Client:
@@ -190,6 +208,64 @@ class Iec6205621Client:
         response = self.read_response()
         return response
 
+    def read_profile(self, start_date: date, end_date: date):
+        """
+        Reads some profile
+        """
+        if not (isinstance(start_date, date) or isinstance(end_date, date)):
+            assert "Not proper date for reading profile"
+
+        self.startup()
+        self.ack_with_option_select("programming")
+
+        response = self.read_response()
+        if not utils.bcc_valid(response.to_bytes()):
+            assert "Not a valid bcc"
+
+        self._send_profile_request(start_date, end_date)
+        response = self.read_response()  # Result
+        if not utils.bcc_valid(response.to_bytes()):
+            assert "Not a valid bcc"
+
+
+        data: messages.DataSet
+        idx = 0
+        values = []
+        temp_data = []
+        for data in response.data:
+            if data.address == 'ch:':
+                continue
+
+            if idx % 9 == 0 and idx != 0:
+                values.append(messages.ProfileData(*temp_data))
+                temp_data = []
+            temp_data.append(data.value)
+            idx += 1
+        for val in values:
+            print(val)
+
+    def _send_profile_request(self, start_date: date, end_date: date):
+        """
+        Send profile request between dates
+        """
+        # Set format for Luna
+        if self.manufacturer_id == "LUN":
+            start_date_ = f"{start_date.year % 100}{start_date.month:02d}{start_date.day:02d}"
+            end_date_ = f"{end_date.year % 100}{end_date.month:02d}{end_date.day:02d}"
+        elif self.manufacturer_id == "MSY":  # Set format for makel
+            start_date_ = f"{start_date.year % 100}{start_date.month:02d}{start_date.day:02d}0000"
+            end_date_ = f"{end_date.year % 100}{end_date.month:02d}{end_date.day:02d}0000"
+
+        command = "R"
+        command_type = "5" if self.manufacturer_id == "LUN" else "2"
+        address = "P1" if self.manufacturer_id == "LUN" else "P.01"
+        end = "" if self.manufacturer_id == "LUN" else None
+
+        cmd = messages.CommandMessage(command=command, command_type=command_type,
+                                      data_set=messages.DataSet(value=f"{start_date_};{end_date_}", address=address, end=end))
+        logger.info(f"Sending profile request to meter. {cmd.to_bytes()}")
+        self.transport.send(cmd.to_bytes())
+
     def send_password(self, password=None):
         """
         On receiving the password challenge request one must handle the password
@@ -230,7 +306,7 @@ class Iec6205621Client:
         ack_message = messages.AckOptionSelectMessage(
             mode_char=mode_char, baud_char=self._switchover_baudrate_char
         )
-        logger.info(f"Sending AckOptionsSelect message: {ack_message}")
+        logger.info(f"Sending AckOptionsSelect message: {ack_message.to_bytes()}")
         self.transport.send(ack_message.to_bytes())
         self.rest()
         self.transport.switch_baudrate(
@@ -243,8 +319,9 @@ class Iec6205621Client:
         When using the optical interface on the device there is no need to send the
         device address in the init request since there can be only one meter.
         Over TCP or bus-like transports like RS-485 you will need to specify the meter
-         you want to talk to by adding the address in the request.
+        you want to talk to by adding the address in the request.
 
+        Sending -> b'/?!\r\n'
         """
         request = messages.RequestMessage(device_address=self.device_address)
         logger.info(f"Sending request message: {request}")
@@ -299,11 +376,10 @@ class Iec6205621Client:
         ack = self.transport.recv(1).decode(constants.ENCODING)
         return ack
 
-    def read_response(self, timeout=None):
+    def read_response(self):
         """
         Reads the response from a device and parses it to the correct message type.
 
-        :param timeout:
         """
         data = self.transport.read()
         if data.startswith(b"\x01"):

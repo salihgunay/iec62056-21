@@ -25,7 +25,6 @@ def add_bcc(message):
 
 
 def _add_bcc(message: bytes):
-    start_bcc_index = 1
     soh_index = message.find(constants.SOH.encode(constants.ENCODING))
     if soh_index == -1:
         # SOH not found

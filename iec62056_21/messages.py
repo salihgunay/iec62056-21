@@ -3,6 +3,7 @@ import typing
 
 from iec62056_21.exceptions import Iec6205621ParseError, ValidationError
 from iec62056_21 import constants, utils
+from datetime import datetime
 
 ENCODING = "latin-1"
 
@@ -50,24 +51,36 @@ class DataSet(Iec6205621Data):
 
     EXCLUDE_CHARS = ["(", ")", "/", "!"]
 
-    def __init__(self, value: str, address: str = None, unit: str = None):
+    def __init__(self, value: str, address: str = None, unit: str = None, end: str = None):
 
         # TODO: in programming mode, protocol mode C the value can be up to 128 chars
 
         self.address = address
         self.value = value
         self.unit = unit
+        self.end = end
 
     def to_representation(self) -> str:
-        if self.unit is not None and self.address is not None:
-            return f"{self.address}({self.value}*{self.unit})"
-        elif self.address is not None and self.unit is None:
-            return f"{self.address}({self.value})"
-        else:
-            if self.value is None:
-                return f"()"
+        if self.end is None:
+            if self.unit is not None and self.address is not None:
+                return f"{self.address}({self.value}*{self.unit})"
+            elif self.address is not None and self.unit is None:
+                return f"{self.address}({self.value})"
             else:
-                return f"({self.value})"
+                if self.value is None:
+                    return f"()"
+                else:
+                    return f"({self.value})"
+        else:
+            if self.unit is not None and self.address is not None:
+                return f"{self.address}({self.value}*{self.unit})({self.end})"
+            elif self.address is not None and self.unit is None:
+                return f"{self.address}({self.value})({self.end})"
+            else:
+                if self.value is None:
+                    return f"()({self.end})"
+                else:
+                    return f"({self.value})({self.end})"
 
     @classmethod
     def from_representation(cls, data_set_string):
@@ -214,7 +227,6 @@ class CommandMessage(Iec6205621Data):
             body = f"{constants.ETX}"
 
         message = f"{header}{body}"
-
         return utils.add_bcc(message)
 
     @classmethod
@@ -224,7 +236,6 @@ class CommandMessage(Iec6205621Data):
         _message = string_data[:-1]  # remove bcc
         header = _message[:3]
         body = _message[3:]
-
         command = header[1]
         command_type = header[2]
         data_set = DataSet.from_representation(body[1:-1])
@@ -375,3 +386,49 @@ class IdentificationMessage(Iec6205621Data):
             f"switchover_baudrate_char={self.switchover_baudrate_char!r}"
             f")"
         )
+
+
+class ProfileData:
+    _data = {}
+
+    def __init__(self, date: str, f180, f280, f580, f680, f780, f880, s1, s2):
+        self._data['date'] = self.convert_date(date)
+        self._data['1.8.0'] = self.convert_float(f180)
+        self._data['2.8.0'] = self.convert_float(f280)
+        self._data['5.8.0'] = self.convert_float(f580)
+        self._data['6.8.0'] = self.convert_float(f680)
+        self._data['7.8.0'] = self.convert_float(f780)
+        self._data['8.8.0'] = self.convert_float(f880)
+        self._data['s1'] = s1
+        self._data['s2'] = s2
+
+    @staticmethod
+    def convert_date(date: str) -> datetime:
+        """
+        Convert date string to datetime object
+        2101050800 -> 2021-01-05 08:00:00
+        """
+        if not isinstance(date, str):
+            assert "None proper type for date"
+        if len(date) != 10:
+            assert "None proper length for string date"
+        return datetime(year=int(f'20{date[:2]}'), month=int(date[2:4]), day=int(date[4:6]), hour=int(date[6:8]), minute=int(date[8:10]))
+
+    @staticmethod
+    def convert_float(string_number: str) -> float:
+        """
+        Convert string number to float object
+        """
+        return float(string_number)
+
+    def __repr__(self):
+        return f"""
+        Date: {self._data['date']}
+        1.8.0: {self._data['1.8.0']}
+        2.8.0: {self._data['2.8.0']}
+        5.8.0: {self._data['5.8.0']}
+        6.8.0: {self._data['6.8.0']}
+        7.8.0: {self._data['7.8.0']}
+        8.8.0: {self._data['8.8.0']}
+        """
+
