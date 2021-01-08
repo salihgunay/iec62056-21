@@ -391,28 +391,17 @@ class IdentificationMessage(Iec6205621Data):
 class ProfileData:
     _data = {}
 
-    def __init__(self, date: str, f180, f280, f580, f680, f780, f880, s1, s2):
-        self._data['date'] = self.convert_date(date)
-        self._data['1.8.0'] = self.convert_float(f180)
-        self._data['2.8.0'] = self.convert_float(f280)
-        self._data['5.8.0'] = self.convert_float(f580)
-        self._data['6.8.0'] = self.convert_float(f680)
-        self._data['7.8.0'] = self.convert_float(f780)
-        self._data['8.8.0'] = self.convert_float(f880)
+    def __init__(self, date: datetime = None, f180=None, f280=None, f580=None, f680=None, f780=None, f880=None, s1=None,
+                 s2=None):
+        self._data['date'] = date
+        self._data['1.8.0'] = self.convert_float(f180) if f180 else None
+        self._data['2.8.0'] = self.convert_float(f280) if f280 else None
+        self._data['5.8.0'] = self.convert_float(f580) if f580 else None
+        self._data['6.8.0'] = self.convert_float(f680) if f680 else None
+        self._data['7.8.0'] = self.convert_float(f780) if f780 else None
+        self._data['8.8.0'] = self.convert_float(f880) if f880 else None
         self._data['s1'] = s1
         self._data['s2'] = s2
-
-    @staticmethod
-    def convert_date(date: str) -> datetime:
-        """
-        Convert date string to datetime object
-        2101050800 -> 2021-01-05 08:00:00
-        """
-        if not isinstance(date, str):
-            assert "None proper type for date"
-        if len(date) != 10:
-            assert "None proper length for string date"
-        return datetime(year=int(f'20{date[:2]}'), month=int(date[2:4]), day=int(date[4:6]), hour=int(date[6:8]), minute=int(date[8:10]))
 
     @staticmethod
     def convert_float(string_number: str) -> float:
