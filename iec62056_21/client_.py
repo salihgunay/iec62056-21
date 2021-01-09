@@ -240,27 +240,20 @@ class Iec6205621Client:
         values = []
         temp_data = []
         for data in response.data[1:]:
-            print(data)
             if idx % 14 == 0 and idx != 0:
                 date_ = self.convert_makel_date(f'{temp_data[0].replace("-", "")[2:]}{temp_data[1].replace(":", "")}')
-                print(date_)
                 values.append(messages.ProfileData(date=date_, f180=temp_data[2].replace("*kWh", "")))
-                temp_data = []
+                temp_data.clear()
             temp_data.append(data.value)
             idx += 1
-        for val in values:
-            print(val)
-
+        return values
 
     def _arrange_profile_data_makel(self, response):
         data: messages.DataSet
         idx = 0
         values = []
         temp_data = []
-        for data in response.data:
-            if data.address == 'ch:':
-                continue
-
+        for data in response.data[1:]:
             if idx % 9 == 0 and idx != 0:
                 date_ = self.convert_makel_date(temp_data[0])
                 values.append(messages.ProfileData(date_, *temp_data[1:]))

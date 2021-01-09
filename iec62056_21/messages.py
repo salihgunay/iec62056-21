@@ -389,19 +389,15 @@ class IdentificationMessage(Iec6205621Data):
 
 
 class ProfileData:
-    _data = {}
 
     def __init__(self, date: datetime = None, f180=None, f280=None, f580=None, f680=None, f780=None, f880=None, s1=None,
                  s2=None):
-        self._data['date'] = date
-        self._data['1.8.0'] = self.convert_float(f180) if f180 else None
-        self._data['2.8.0'] = self.convert_float(f280) if f280 else None
-        self._data['5.8.0'] = self.convert_float(f580) if f580 else None
-        self._data['6.8.0'] = self.convert_float(f680) if f680 else None
-        self._data['7.8.0'] = self.convert_float(f780) if f780 else None
-        self._data['8.8.0'] = self.convert_float(f880) if f880 else None
-        self._data['s1'] = s1
-        self._data['s2'] = s2
+        self._data = {'date': date, '1.8.0': self.convert_float(f180) if f180 else None,
+                      '2.8.0': self.convert_float(f280) if f280 else None,
+                      '5.8.0': self.convert_float(f580) if f580 else None,
+                      '6.8.0': self.convert_float(f680) if f680 else None,
+                      '7.8.0': self.convert_float(f780) if f780 else None,
+                      '8.8.0': self.convert_float(f880) if f880 else None, 's1': s1, 's2': s2}
 
     @staticmethod
     def convert_float(string_number: str) -> float:

@@ -7,6 +7,7 @@ client.connect()
 start_date, end_date = date.today() - timedelta(days=1), date.today()
 
 #res = client.standard_readout()
-client.read_profile(start_date, end_date)
+res = client.read_profile(start_date, end_date)
+print("result", type(res))
 
 
