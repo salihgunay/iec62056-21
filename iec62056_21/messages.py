@@ -309,6 +309,13 @@ class AnswerDataMessage(Iec6205621Data):
     def __repr__(self):
         return f"{self.__class__.__name__}(data_block={self.data_block!r})"
 
+    def to_json(self):
+        res = {}
+        data: DataSet
+        for data in self.data:
+            res[data.address] = data.value
+        return res
+
 
 class RequestMessage(Iec6205621Data):
     def __init__(self, device_address=""):
@@ -392,7 +399,8 @@ class ProfileData:
 
     def __init__(self, date: datetime = None, f180=None, f280=None, f580=None, f680=None, f780=None, f880=None, s1=None,
                  s2=None):
-        self._data = {'date': date, '1.8.0': self.convert_float(f180) if f180 else None,
+        self._data = {'date': date,
+                      '1.8.0': self.convert_float(f180) if f180 else None,
                       '2.8.0': self.convert_float(f280) if f280 else None,
                       '5.8.0': self.convert_float(f580) if f580 else None,
                       '6.8.0': self.convert_float(f680) if f680 else None,
@@ -417,3 +425,8 @@ class ProfileData:
         8.8.0: {self._data['8.8.0']}
         """
 
+    def to_json(self):
+        """
+        Return class as json
+        """
+        return self._data
